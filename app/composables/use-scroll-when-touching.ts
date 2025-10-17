@@ -31,7 +31,9 @@ export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
       if (!element.value) return
       if (touching.value) return // Only scroll when not touching
       const currentTop = parseFloat(element.value.style.transform.replace(/[^\d.-]/g, "") || "0")
-      const newTop = Math.min(currentTop + newVelocity.y, MAX_TOP)
+      // Convert velocity from pixels/second to pixels/frame (assuming 60fps = 16ms per frame)
+      const velocityPerFrame = newVelocity.y / 60
+      const newTop = Math.min(currentTop + velocityPerFrame, MAX_TOP)
       element.value.style.transform = `translateY(${newTop}px)`
     },
     { deep: true }
