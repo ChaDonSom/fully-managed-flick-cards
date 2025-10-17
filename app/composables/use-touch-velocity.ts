@@ -1,35 +1,130 @@
+import { touching, onAfterTouchMove, onAfterTouchEnd, onBeforeTouchCancel } from "./use-touch-ingestion"
+
+export const deltas = ref<{ x: number; y: number; timeStamp: number }[]>([])
+
+const SLOWDOWN_THRESHOLD_MS = 50 // If no touchmove for 50ms, assume slowing down
+
 export function useTouchVelocity({ count = 10, ms = undefined }: { count?: number; ms?: number } = {}) {
-  return computed(() => {
-    const recentTouches = getRecentTouches({ count, ms })
+  let slowdownTimer: NodeJS.Timeout | null = null
+  onAfterTouchMove(() => {
+    if (touchmoves.value.length < 2) {
+      deltas.value = []
+      return
+    }
+    // Get the latest delta and add it to the deltas array
+    const recentTouches = getRecentTouches({ count: 2 })
     const firstTouch = recentTouches[0]
     const lastTouch = recentTouches[recentTouches.length - 1]
-    if (!firstTouch || !lastTouch) return { x: 0, y: 0 }
-    // Calculate velocity in pixels per second
+    if (!firstTouch || !lastTouch) return
+    // @ts-expect-error
+    if (lastTouch.__deltaProcessed) return // Prevent double-processing
     const deltaTime = (lastTouch.timeStamp - firstTouch.timeStamp) / 1000 || 1 // in seconds
     const deltaX = (lastTouch.touches[0]?.clientX || 0) - (firstTouch.touches[0]?.clientX || 0)
     const deltaY = (lastTouch.touches[0]?.clientY || 0) - (firstTouch.touches[0]?.clientY || 0)
-    return {
-      x: deltaX / deltaTime,
-      y: deltaY / deltaTime,
+    deltas.value.push({ x: deltaX / deltaTime, y: deltaY / deltaTime, timeStamp: lastTouch.timeStamp })
+    // @ts-expect-error
+    lastTouch.__deltaProcessed = true
+  })
+
+  // Clear any existing slowdown timer and start a new one
+  if (slowdownTimer) {
+    clearTimeout(slowdownTimer)
+  }
+  onAfterTouchStart(() => {
+    slowdownTimer = setInterval(() => {
+      // If we're still touching but haven't gotten a touchmove in a while,
+      // inject a synthetic "slowdown" delta
+      if (touching.value) {
+        const now = performance.now()
+        deltas.value.push({ x: 0, y: 0, timeStamp: now })
+      }
+    }, SLOWDOWN_THRESHOLD_MS)
+  })
+
+  // Clear the slowdown timer when touch ends
+  onAfterTouchEnd(() => {
+    if (slowdownTimer) {
+      clearTimeout(slowdownTimer)
+      slowdownTimer = null
     }
   })
+
+  onBeforeTouchCancel(() => {
+    if (slowdownTimer) {
+      clearTimeout(slowdownTimer)
+      slowdownTimer = null
+    }
+  })
+
+  // Clip deltas to within standard deviation of the last 10
+  const clipped = computed(() => {
+    const recentDeltas = getRecentDeltas({ count: 10 })
+    if (recentDeltas.length === 0) {
+      return deltas.value
+    }
+    const meanX = recentDeltas.reduce((acc, delta) => acc + delta.x, 0) / recentDeltas.length
+    const meanY = recentDeltas.reduce((acc, delta) => acc + delta.y, 0) / recentDeltas.length
+    const stdDevX = Math.sqrt(
+      recentDeltas.reduce((acc, delta) => acc + (delta.x - meanX) ** 2, 0) / recentDeltas.length
+    )
+    const stdDevY = Math.sqrt(
+      recentDeltas.reduce((acc, delta) => acc + (delta.y - meanY) ** 2, 0) / recentDeltas.length
+    )
+    return deltas.value.filter(
+      (delta) => Math.abs(delta.x - meanX) <= stdDevX * 2 && Math.abs(delta.y - meanY) <= stdDevY * 2
+    )
+  })
+
+  // Average out the deltas to get a smoother velocity
+  const averaged = computed(() => {
+    const recentDeltas = clipped.value
+    if (recentDeltas.length === 0) {
+      return { x: 0, y: 0 }
+    }
+    const total = recentDeltas.reduce(
+      (acc, delta) => {
+        acc.x += delta.x
+        acc.y += delta.y
+        return acc
+      },
+      { x: 0, y: 0 }
+    )
+    return {
+      x: total.x / recentDeltas.length,
+      y: total.y / recentDeltas.length,
+    }
+  })
+
+  return averaged
 }
 
-function getRecentTouches({ count = 10, ms = undefined }: { count?: number; ms?: number }) {
+function getRecent<T extends { timeStamp: number }>(
+  items: T[],
+  { count = 10, ms = undefined }: { count?: number; ms?: number }
+) {
   // If both are defined, go with whichever has more events
   if (ms !== undefined) {
     const now = performance.now()
-    const latestMoves = touchmoves.value.filter((t) => now - t.timeStamp <= ms)
-    if (latestMoves.length >= count) {
-      return latestMoves.slice(-count)
+    const latestItems = items.filter((t) => now - t.timeStamp <= ms)
+    if (latestItems.length >= count) {
+      return latestItems.slice(-count)
     } else {
-      return latestMoves
+      return latestItems
     }
   } else {
-    // If we don't have enough touches, return empty array. "Last 10 touches" means at LEAST 10 touches.
-    if (touchmoves.value.length < count) {
-      return []
+    // "Last 10 items" means at MOST 10 items.
+    if (items.length > count) {
+      return items.slice(-count)
+    } else {
+      return items
     }
-    return touchmoves.value.slice(-count)
   }
+}
+
+function getRecentTouches({ count = 10, ms = undefined }: { count?: number; ms?: number }) {
+  return getRecent(touchmoves.value, { count, ms })
+}
+
+function getRecentDeltas({ count = 10, ms = undefined }: { count?: number; ms?: number }) {
+  return getRecent(deltas.value, { count, ms })
 }

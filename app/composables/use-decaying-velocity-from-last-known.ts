@@ -1,6 +1,6 @@
 export const decayingVelocity = ref<{ x: number; y: number }>({ x: 0, y: 0 })
 
-export function useDecayingVelocityFromLastKnown({ decayRate = 0.95 }: { decayRate?: number } = {}) {
+export function useDecayingVelocityFromLastKnown({ decayRate = 0.6 }: { decayRate?: number } = {}) {
   const { lastKnownVelocity } = useLastKnownTouchVelocityAfterDone()
 
   watch(

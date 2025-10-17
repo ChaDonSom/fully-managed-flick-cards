@@ -11,9 +11,19 @@ export const touchmoves = ref<TouchEvent[]>([])
 // Lifecycle hooks for touch events
 type TouchHook = (event: TouchEvent) => void
 
+const afterTouchStartHooks: TouchHook[] = []
+const afterTouchMoveHooks: TouchHook[] = []
 const beforeTouchEndHooks: TouchHook[] = []
 const afterTouchEndHooks: TouchHook[] = []
 const beforeTouchCancelHooks: TouchHook[] = []
+
+export function onAfterTouchStart(hook: TouchHook) {
+  afterTouchStartHooks.push(hook)
+}
+
+export function onAfterTouchMove(hook: TouchHook) {
+  afterTouchMoveHooks.push(hook)
+}
 
 /**
  * Register a hook to be called before touchend clears state
@@ -54,6 +64,7 @@ export function useTouchIngestion() {
       // Here you can add your touch processing logic
       touching.value = true
       // For example, you might want to call other functions in your touch processing pipeline
+      afterTouchStartHooks.forEach((hook) => hook(event))
     },
     { passive: false } // Set to false if you plan to call preventDefault()
   )
@@ -71,6 +82,7 @@ export function useTouchIngestion() {
   window.addEventListener("touchmove", (event) => {
     moving.value = true
     touchmoves.value.push(event)
+    afterTouchMoveHooks.forEach((hook) => hook(event))
   })
   window.addEventListener("touchcancel", (event) => {
     // Call before hooks while state is still available

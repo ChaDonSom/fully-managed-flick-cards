@@ -1,6 +1,6 @@
 export const lastKnownVelocity = ref({ x: 0, y: 0 })
 export function useLastKnownTouchVelocityAfterDone() {
-  const velocity = useTouchVelocity({ count: 30, ms: 300 })
+  const velocity = useTouchVelocity({ count: 100, ms: 300 })
 
   // Hook into touchend before state is cleared to capture the final velocity
   onBeforeTouchEnd(() => {
