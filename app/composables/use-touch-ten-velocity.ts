@@ -1,7 +1,6 @@
-export function useTouchTenVelocity() {
+export function useTouchVelocity({ count = 10, ms = undefined }: { count?: number; ms?: number } = {}) {
   return computed(() => {
-    if (touchmoves.value.length < 10) return { x: 0, y: 0 }
-    const recentTouches = touchmoves.value.slice(-10)
+    const recentTouches = getRecentTouches({ count, ms })
     const firstTouch = recentTouches[0]
     const lastTouch = recentTouches[recentTouches.length - 1]
     if (!firstTouch || !lastTouch) return { x: 0, y: 0 }
@@ -14,4 +13,17 @@ export function useTouchTenVelocity() {
       y: deltaY / deltaTime,
     }
   })
+}
+
+function getRecentTouches({ count = 10, ms = undefined }: { count?: number; ms?: number }) {
+  if (ms !== undefined) {
+    const now = performance.now()
+    return touchmoves.value.filter((t) => now - t.timeStamp <= ms)
+  } else {
+    // If we don't have enough touches, return empty array. "Last 10 touches" means at LEAST 10 touches.
+    if (touchmoves.value.length < count) {
+      return []
+    }
+    return touchmoves.value.slice(-count)
+  }
 }

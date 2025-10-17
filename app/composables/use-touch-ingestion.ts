@@ -32,21 +32,16 @@ export function useTouchIngestion() {
   window.addEventListener("touchend", (event) => {
     touching.value = false
     moving.value = false
+    touchmoves.value = []
   })
   window.addEventListener("touchmove", (event) => {
     moving.value = true
     touchmoves.value.push(event)
-    // Here you can calculate velocity based on touch movement
-    // We calculate the moving velocity of the last touch point vs the previous touch point, the last 10 touches,
-    // and the last 100 touches.
-    if (event.touches.length > 0) {
-      const touch = event.touches[0]
-      // For simplicity, let's just set a dummy velocity value
-    }
   })
   window.addEventListener("touchcancel", (event) => {
     touching.value = false
     moving.value = false
+    touchmoves.value = []
   })
 
   window.__touchIngestionRegistered = true
