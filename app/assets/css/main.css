@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/*
+	Prevent browser pull-to-refresh and rubber-band overscroll
+	- Chrome/Android: overscroll-behavior on the page prevents PTR
+	- iOS (Safari): we add a JS fallback plugin; these styles still help
+*/
+html,
+body {
+  height: 100%;
+  overscroll-behavior-y: none; /* Disable viewport-level pull-to-refresh */
+}
+
+/* App root becomes the scroll container when needed */
+#__nuxt {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain; /* No scroll chaining to the viewport */
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  touch-action: pan-x; /* Allow only horizontal pans by default */
+}
