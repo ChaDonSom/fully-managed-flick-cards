@@ -6,6 +6,10 @@ const last100msTouchVelocity = useTouchVelocity({ ms: 100 })
 const last500msTouchVelocity = useTouchVelocity({ ms: 500 })
 const scrollElement = ref<HTMLElement | null>(null)
 useScrollWhenTouching(scrollElement)
+
+// Setup console capture
+const { setupCapture } = useConsoleCapture("warn")
+setupCapture()
 </script>
 
 <template>
@@ -25,5 +29,8 @@ useScrollWhenTouching(scrollElement)
         </div>
       </Card>
     </div>
+
+    <!-- Console Overlay -->
+    <ConsoleOverlay />
   </div>
 </template>
