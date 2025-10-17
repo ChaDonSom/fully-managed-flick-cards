@@ -1,13 +1,12 @@
+export const lastKnownVelocity = ref({ x: 0, y: 0 })
 export function useLastKnownTouchVelocityAfterDone() {
-  const velocity = useTouchVelocity({ ms: 100 })
-  const lastKnownVelocity = ref({ x: 0, y: 0 })
+  const velocity = useTouchVelocity({ count: 30, ms: 300 })
 
-  // Watch for when touching stops to capture the last known velocity
-  watch(velocity, (oldVelocity, newVelocity) => {
-    if (oldVelocity.x !== 0 && oldVelocity.y !== 0 && newVelocity.x === 0 && newVelocity.y === 0) {
-      lastKnownVelocity.value = oldVelocity
-      console.log("Touch velocity has settled to zero", { oldVelocity, newVelocity })
-      // Here you can trigger any action you want when the touch velocity settles to zero
+  // Hook into touchend before state is cleared to capture the final velocity
+  onBeforeTouchEnd(() => {
+    const currentVelocity = velocity.value
+    if (currentVelocity.x !== 0 || currentVelocity.y !== 0) {
+      lastKnownVelocity.value = currentVelocity
     }
   })
 
