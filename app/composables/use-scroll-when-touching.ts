@@ -1,3 +1,5 @@
+const MAX_TOP = 0
+
 export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
   if (import.meta.server) return // No need to run on server
 
@@ -16,7 +18,8 @@ export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
       if (!lastTouch || !prevTouch) return
       const deltaY = (lastTouch.touches[0]?.clientY || 0) - (prevTouch.touches[0]?.clientY || 0)
       const currentTop = parseFloat(element.value.style.transform.replace(/[^\d.-]/g, "") || "0")
-      element.value.style.transform = `translateY(${currentTop + deltaY}px)`
+      const newTop = Math.min(currentTop + deltaY, MAX_TOP)
+      element.value.style.transform = `translateY(${newTop}px)`
     },
     { deep: true }
   )
@@ -28,7 +31,8 @@ export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
       if (!element.value) return
       if (touching.value) return // Only scroll when not touching
       const currentTop = parseFloat(element.value.style.transform.replace(/[^\d.-]/g, "") || "0")
-      element.value.style.transform = `translateY(${currentTop + newVelocity.y}px)`
+      const newTop = Math.min(currentTop + newVelocity.y, MAX_TOP)
+      element.value.style.transform = `translateY(${newTop}px)`
     },
     { deep: true }
   )
