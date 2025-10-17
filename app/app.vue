@@ -17,12 +17,7 @@ setupCapture()
           <pre>card {{ i }}</pre>
           <HistoBar :data="Math.abs(lastTenTouchVelocity.y)" class="w-64">Last 10 touches Y</HistoBar>
           <HistoBar :data="Math.abs(lastKnownVelocity.y)" class="w-64">Last known velocity Y</HistoBar>
-          <HistoBar :data="Math.abs(last50TouchVelocity.x)" class="w-64">Last 50 touches X</HistoBar>
-          <HistoBar :data="Math.abs(last50TouchVelocity.y)" class="w-64">Last 50 touches Y</HistoBar>
-          <HistoBar :data="Math.abs(last100msTouchVelocity.x)" class="w-64">Last 100 ms X</HistoBar>
-          <HistoBar :data="Math.abs(last100msTouchVelocity.y)" class="w-64">Last 100 ms Y</HistoBar>
-          <HistoBar :data="Math.abs(last500msTouchVelocity.x)" class="w-64">Last 500 ms X</HistoBar>
-          <HistoBar :data="Math.abs(last500msTouchVelocity.y)" class="w-64">Last 500 ms Y</HistoBar>
+          <HistoBar :data="Math.abs(decayingVelocity.y)" class="w-64">Decaying velocity Y</HistoBar>
         </div>
       </Card>
     </div>

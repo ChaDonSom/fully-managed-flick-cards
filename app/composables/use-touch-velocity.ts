@@ -16,9 +16,15 @@ export function useTouchVelocity({ count = 10, ms = undefined }: { count?: numbe
 }
 
 function getRecentTouches({ count = 10, ms = undefined }: { count?: number; ms?: number }) {
+  // If both are defined, go with whichever has more events
   if (ms !== undefined) {
     const now = performance.now()
-    return touchmoves.value.filter((t) => now - t.timeStamp <= ms)
+    const latestMoves = touchmoves.value.filter((t) => now - t.timeStamp <= ms)
+    if (latestMoves.length >= count) {
+      return latestMoves.slice(-count)
+    } else {
+      return latestMoves
+    }
   } else {
     // If we don't have enough touches, return empty array. "Last 10 touches" means at LEAST 10 touches.
     if (touchmoves.value.length < count) {

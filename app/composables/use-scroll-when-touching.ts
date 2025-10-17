@@ -21,8 +21,21 @@ export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
     { deep: true }
   )
 
+  const { decayingVelocity } = useDecayingVelocityFromLastKnown()
+  const decayingVelocityWatcher = watch(
+    decayingVelocity,
+    (newVelocity) => {
+      if (!element.value) return
+      if (touching.value) return // Only scroll when not touching
+      const currentTop = parseFloat(element.value.style.transform.replace(/[^\d.-]/g, "") || "0")
+      element.value.style.transform = `translateY(${currentTop + newVelocity.y}px)`
+    },
+    { deep: true }
+  )
+
   onBeforeUnmount(() => {
     watcher() // Stop watching
+    decayingVelocityWatcher() // Stop watching
     if (element.value) {
       element.value.style.willChange = ""
       element.value.style.position = ""
