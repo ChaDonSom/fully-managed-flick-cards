@@ -22,8 +22,9 @@ export function useScrollWhenTouching(element: Ref<HTMLElement | null>) {
     rafId = null
   }
 
+  // Watch the identity of the last touch event to react to every move, even when array length is capped
   const watcher = watch(
-    () => touchmoves.value.length,
+    () => touchmoves.value[touchmoves.value.length - 1],
     () => {
       if (!element.value) return
       const len = touchmoves.value.length

@@ -90,9 +90,10 @@ export function useTouchIngestion() {
       moving.value = true
       touchmoves.value.push(event)
       // Trim to last N to limit work
-      // if (touchmoves.value.length > MAX_TOUCHMOVES) {
-      //   touchmoves.value.shift()
-      // }
+      if (touchmoves.value.length > MAX_TOUCHMOVES) {
+        // Remove oldest entries in a single operation (more efficient than repeated shift)
+        touchmoves.value.splice(0, touchmoves.value.length - MAX_TOUCHMOVES)
+      }
       afterTouchMoveHooks.forEach((hook) => hook(event))
     },
     { passive: true }
