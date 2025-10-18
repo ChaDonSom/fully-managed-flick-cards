@@ -7,6 +7,7 @@ declare global {
 export const touching = ref(false)
 export const moving = ref(false)
 export const touchmoves = ref<TouchEvent[]>([])
+const MAX_TOUCHMOVES = 60 // cap to avoid unbounded growth / reactivity churn
 
 // Lifecycle hooks for touch events
 type TouchHook = (event: TouchEvent) => void
@@ -68,22 +69,34 @@ export function useTouchIngestion() {
     },
     { passive: false } // Set to false if you plan to call preventDefault()
   )
-  window.addEventListener("touchend", (event) => {
-    // Call before hooks while state is still available
-    beforeTouchEndHooks.forEach((hook) => hook(event))
+  window.addEventListener(
+    "touchend",
+    (event) => {
+      // Call before hooks while state is still available
+      beforeTouchEndHooks.forEach((hook) => hook(event))
 
-    touching.value = false
-    moving.value = false
-    touchmoves.value = []
+      touching.value = false
+      moving.value = false
+      touchmoves.value = []
 
-    // Call after hooks after state has been cleared
-    afterTouchEndHooks.forEach((hook) => hook(event))
-  })
-  window.addEventListener("touchmove", (event) => {
-    moving.value = true
-    touchmoves.value.push(event)
-    afterTouchMoveHooks.forEach((hook) => hook(event))
-  })
+      // Call after hooks after state has been cleared
+      afterTouchEndHooks.forEach((hook) => hook(event))
+    },
+    { passive: true }
+  )
+  window.addEventListener(
+    "touchmove",
+    (event) => {
+      moving.value = true
+      touchmoves.value.push(event)
+      // Trim to last N to limit work
+      // if (touchmoves.value.length > MAX_TOUCHMOVES) {
+      //   touchmoves.value.shift()
+      // }
+      afterTouchMoveHooks.forEach((hook) => hook(event))
+    },
+    { passive: true }
+  )
   window.addEventListener("touchcancel", (event) => {
     // Call before hooks while state is still available
     beforeTouchCancelHooks.forEach((hook) => hook(event))

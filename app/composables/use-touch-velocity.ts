@@ -1,11 +1,19 @@
-import { touching, onAfterTouchMove, onAfterTouchEnd, onBeforeTouchCancel } from "./use-touch-ingestion"
+import {
+  touching,
+  onAfterTouchMove,
+  onAfterTouchEnd,
+  onBeforeTouchCancel,
+  onAfterTouchStart,
+  touchmoves,
+} from "./use-touch-ingestion"
 
 export const deltas = ref<{ x: number; y: number; timeStamp: number }[]>([])
+const MAX_DELTAS = 120
 
 const SLOWDOWN_THRESHOLD_MS = 50 // If no touchmove for 50ms, assume slowing down
 
 export function useTouchVelocity({ count = 10, ms = undefined }: { count?: number; ms?: number } = {}) {
-  let slowdownTimer: NodeJS.Timeout | null = null
+  let slowdownRaf: number | null = null
   onAfterTouchMove(() => {
     if (touchmoves.value.length < 2) {
       deltas.value = []
@@ -22,37 +30,49 @@ export function useTouchVelocity({ count = 10, ms = undefined }: { count?: numbe
     const deltaX = (lastTouch.touches[0]?.clientX || 0) - (firstTouch.touches[0]?.clientX || 0)
     const deltaY = (lastTouch.touches[0]?.clientY || 0) - (firstTouch.touches[0]?.clientY || 0)
     deltas.value.push({ x: deltaX / deltaTime, y: deltaY / deltaTime, timeStamp: lastTouch.timeStamp })
+    if (deltas.value.length > MAX_DELTAS) {
+      deltas.value = deltas.value.slice(-MAX_DELTAS)
+    }
     // @ts-expect-error
     lastTouch.__deltaProcessed = true
   })
 
   // Clear any existing slowdown timer and start a new one
-  if (slowdownTimer) {
-    clearTimeout(slowdownTimer)
-  }
-  onAfterTouchStart(() => {
-    slowdownTimer = setInterval(() => {
+  const startSlowdownLoop = () => {
+    const loop = () => {
       // If we're still touching but haven't gotten a touchmove in a while,
-      // inject a synthetic "slowdown" delta
+      // inject a synthetic "slowdown" delta periodically
       if (touching.value) {
         const now = performance.now()
-        deltas.value.push({ x: 0, y: 0, timeStamp: now })
+        const last = deltas.value[deltas.value.length - 1]
+        if (!last || now - last.timeStamp >= SLOWDOWN_THRESHOLD_MS) {
+          deltas.value.push({ x: 0, y: 0, timeStamp: now })
+          if (deltas.value.length > MAX_DELTAS) {
+            deltas.value = deltas.value.slice(-MAX_DELTAS)
+          }
+        }
       }
-    }, SLOWDOWN_THRESHOLD_MS)
+      slowdownRaf = requestAnimationFrame(loop)
+    }
+    slowdownRaf = requestAnimationFrame(loop)
+  }
+
+  onAfterTouchStart(() => {
+    if (slowdownRaf == null) startSlowdownLoop()
   })
 
   // Clear the slowdown timer when touch ends
   onAfterTouchEnd(() => {
-    if (slowdownTimer) {
-      clearTimeout(slowdownTimer)
-      slowdownTimer = null
+    if (slowdownRaf != null) {
+      cancelAnimationFrame(slowdownRaf)
+      slowdownRaf = null
     }
   })
 
   onBeforeTouchCancel(() => {
-    if (slowdownTimer) {
-      clearTimeout(slowdownTimer)
-      slowdownTimer = null
+    if (slowdownRaf != null) {
+      cancelAnimationFrame(slowdownRaf)
+      slowdownRaf = null
     }
   })
 

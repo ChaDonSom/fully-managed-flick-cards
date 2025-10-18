@@ -4,9 +4,12 @@ const lastTenTouchVelocity = useTouchVelocity()
 const scrollElement = ref<HTMLElement | null>(null)
 useScrollWhenTouching(scrollElement)
 
-// Setup console capture
-const { setupCapture } = useConsoleCapture("warn")
-setupCapture()
+// Setup console capture (dev-only)
+const isDev = computed(() => import.meta.dev)
+if (isDev.value) {
+  const { setupCapture } = useConsoleCapture("warn")
+  setupCapture()
+}
 </script>
 
 <template>
@@ -26,7 +29,7 @@ setupCapture()
       </Card>
     </div>
 
-    <!-- Console Overlay -->
-    <ConsoleOverlay />
+    <!-- Console Overlay (dev-only) -->
+    <ConsoleOverlay v-if="isDev" />
   </div>
 </template>
